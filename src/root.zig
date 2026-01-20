@@ -129,7 +129,7 @@ pub fn run() !void {
     defer rl.CloseWindow();
     rl.SetTargetFPS(60);
 
-    const texture = rl.LoadTexture("./image.png");
+    const texture = rl.LoadTexture("./assets/player.png");
     defer rl.UnloadTexture(texture);
 
     const player1 = Player{
