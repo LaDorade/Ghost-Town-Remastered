@@ -10,9 +10,14 @@ const Player = struct {
         .x = 200,
         .y = 200,
     },
+    orientation: SpriteOrientation = .RIGHT,
     position: rl.Vector2,
     texture: rl.Texture,
     keyMap: PlayerKeys,
+};
+const SpriteOrientation = enum(i2) {
+    RIGHT = 1,
+    LEFT = -1,
 };
 const SCALE_FACTOR = 3;
 const PlayerKeys = struct {
@@ -60,9 +65,11 @@ fn handlePlayerMovement(player: *Player, dTime: f32) rl.Vector2 {
     const keys = player.keyMap;
     if (rl.IsKeyDown(keys.LEFT)) {
         userVel.x -= 1;
+        player.orientation = .LEFT;
     }
     if (rl.IsKeyDown(keys.RIGHT)) {
         userVel.x += 1;
+        player.orientation = .RIGHT;
     }
     if (rl.IsKeyDown(keys.UP)) {
         userVel.y -= 1;
@@ -81,8 +88,8 @@ fn drawPlayer(player: *Player) void {
     rl.DrawTexturePro(
         player.texture,
         .{
+            .width = @floatFromInt(player.texture.width * @intFromEnum(player.orientation)),
             .height = @floatFromInt(player.texture.height),
-            .width = @floatFromInt(player.texture.width),
             .x = 0,
             .y = 0,
         },
