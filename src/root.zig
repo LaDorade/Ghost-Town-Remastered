@@ -6,6 +6,8 @@ const rl = @cImport({
 });
 
 const Player = struct {
+    const FRAME_NUMBER = 7;
+
     velocity: rl.Vector2 = .{
         .x = 200,
         .y = 200,
@@ -14,6 +16,12 @@ const Player = struct {
     position: rl.Vector2,
     texture: rl.Texture,
     keyMap: PlayerKeys,
+
+    sourceRec: rl.Rectangle,
+    currentFrame: c_int = 0,
+    frameCounter: c_int = 0,
+    frameSpeed: c_int = 7,
+    spriteTint: rl.Color = rl.WHITE,
 };
 const SpriteOrientation = enum(i2) {
     RIGHT = 1,
@@ -85,26 +93,31 @@ fn handlePlayerMovement(player: *Player, dTime: f32) rl.Vector2 {
 }
 
 fn drawPlayer(player: *Player) void {
+    player.frameCounter += 1;
+    if (player.frameCounter >= @divFloor(60, player.frameSpeed)) {
+        player.frameCounter = 0;
+        player.currentFrame += 1;
+
+        if (player.currentFrame > (Player.FRAME_NUMBER - 1)) player.currentFrame = 0;
+
+        player.sourceRec.x = @floatFromInt(player.currentFrame * @divExact(player.texture.width, Player.FRAME_NUMBER));
+    }
+    player.sourceRec.width = @floatFromInt(@divExact(player.texture.width, Player.FRAME_NUMBER) * @intFromEnum(player.orientation));
     rl.DrawTexturePro(
         player.texture,
+        player.sourceRec,
         .{
-            .width = @floatFromInt(player.texture.width * @intFromEnum(player.orientation)),
-            .height = @floatFromInt(player.texture.height),
-            .x = 0,
-            .y = 0,
-        },
-        .{
-            .width = @floatFromInt(player.texture.width * SCALE_FACTOR),
-            .height = @floatFromInt(player.texture.height * SCALE_FACTOR),
             .x = player.position.x,
             .y = player.position.y,
+            .width = @floatFromInt(@divExact(player.texture.width, Player.FRAME_NUMBER) * SCALE_FACTOR),
+            .height = @floatFromInt(player.texture.height * SCALE_FACTOR),
         },
         .{
             .x = 0,
             .y = 0,
         },
         0,
-        rl.WHITE,
+        player.spriteTint,
     );
 }
 
@@ -136,7 +149,7 @@ pub fn run() !void {
     defer rl.CloseWindow();
     rl.SetTargetFPS(60);
 
-    const texture = rl.LoadTexture("./assets/player.png");
+    const texture = rl.LoadTexture("./assets/sprite.png");
     defer rl.UnloadTexture(texture);
 
     const player1 = Player{
@@ -146,11 +159,24 @@ pub fn run() !void {
         },
         .texture = texture,
         .keyMap = player1Keys,
+        .sourceRec = .{
+            .x = 0,
+            .y = 0,
+            .width = @floatFromInt(@divExact(texture.width, Player.FRAME_NUMBER) * @intFromEnum(SpriteOrientation.RIGHT)),
+            .height = @floatFromInt(texture.height),
+        },
     };
     const player2 = Player{
         .position = .{ .x = 0, .y = 0 },
         .texture = texture,
         .keyMap = player2Keys,
+        .sourceRec = .{
+            .x = 0,
+            .y = 0,
+            .width = @floatFromInt(@divExact(texture.width, Player.FRAME_NUMBER) * @intFromEnum(SpriteOrientation.RIGHT)),
+            .height = @floatFromInt(texture.height),
+        },
+        .spriteTint = rl.BLUE,
     };
     var playList = [2]Player{
         player1,
