@@ -3,6 +3,8 @@ const rl = @import("c.zig").rl;
 
 const Player = @import("Player.zig");
 const Projectile = @import("Projectile.zig");
+const SpriteAnimation = @import("SpriteAnimation.zig");
+const SpriteSheetLoader = @import("SpriteSheetLoader.zig");
 
 const player1Keys: Player.Keys = .{
     .UP = rl.KEY_W,
@@ -25,12 +27,23 @@ pub fn run() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
+    const GLOBAL_FPS = 60;
+
     rl.InitWindow(800, 600, "game");
     defer rl.CloseWindow();
-    rl.SetTargetFPS(60);
+    rl.SetTargetFPS(GLOBAL_FPS);
 
-    const texture = rl.LoadTexture("./assets/player.png");
+    const texture = rl.LoadTexture(
+        SpriteSheetLoader.playerMovementSprite.texturePath,
+    );
     defer rl.UnloadTexture(texture);
+
+    var sprite = SpriteAnimation.CreateSpriteAnimation(
+        texture,
+        SpriteSheetLoader.playerMovementSprite.frameRectangles,
+        10,
+        GLOBAL_FPS,
+    );
 
     const player1 = Player{
         .sprite = .{
@@ -57,11 +70,19 @@ pub fn run() !void {
     );
     defer projList.deinit(allocator);
 
+    var printBuf: [256]u8 = undefined;
     while (!rl.WindowShouldClose()) {
         rl.BeginDrawing();
         defer rl.EndDrawing();
-
         rl.ClearBackground(rl.RAYWHITE);
+
+        @memset(&printBuf, 0);
+        const fpsText = try std.fmt.bufPrint(&printBuf, "FPS: {}", .{rl.GetFPS()});
+        rl.DrawText(fpsText.ptr, 0, 0, 24, rl.BLACK);
+
+        sprite.draw(.{ .x = 300, .y = 300 }, .RIGHT);
+
+        if (true) continue;
 
         const dTime = rl.GetFrameTime();
 
@@ -98,7 +119,7 @@ pub fn run() !void {
 
         // draw players last to be on top
         for (&playList) |*p| {
-            p.drawPlayer();
+            p.draw();
         }
     }
 }

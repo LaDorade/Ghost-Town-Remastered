@@ -1,5 +1,6 @@
 const rl = @import("c.zig").rl;
 const Projectile = @import("Projectile.zig");
+const SpriteAnimation = @import("SpriteAnimation.zig");
 
 const Self = @This();
 
@@ -11,18 +12,6 @@ sprite: Sprite,
 keyMap: Keys,
 hurtbox: rl.Rectangle,
 
-pub fn getPosition(self: *Self) rl.Vector2 {
-    return .{
-        .x = self.hurtbox.x,
-        .y = self.hurtbox.y,
-    };
-}
-pub fn getWidth(self: *Self) f32 {
-    return self.hurtbox.width;
-}
-pub fn getHeight(self: *Self) f32 {
-    return self.hurtbox.height;
-}
 pub fn handlePlayerMovement(self: *Self, dTime: f32) rl.Vector2 {
     var userVel = rl.Vector2{
         .x = 0,
@@ -49,7 +38,7 @@ pub fn handlePlayerMovement(self: *Self, dTime: f32) rl.Vector2 {
 
     return userVel;
 }
-pub fn drawPlayer(self: *Self) void {
+pub fn draw(self: *Self) void {
     rl.DrawTexturePro(
         self.sprite.texture,
         .{
