@@ -8,9 +8,18 @@ velocity: rl.Vector2 = .{
     .x = 200,
     .y = 200,
 },
-sprite: Sprite,
 keyMap: Keys,
 hurtbox: rl.Rectangle,
+
+orientation: FaceDirection,
+currentSpriteStance: PlayerSpriteStance,
+currentSprite: *SpriteAnimation,
+spriteList: []const SpriteAnimation,
+
+pub const PlayerSpriteStance = enum(usize) {
+    Movement = 0,
+    Idle = 1,
+};
 
 pub fn handlePlayerMovement(self: *Self, dTime: f32) rl.Vector2 {
     var userVel = rl.Vector2{
@@ -20,11 +29,11 @@ pub fn handlePlayerMovement(self: *Self, dTime: f32) rl.Vector2 {
     const keys = self.keyMap;
     if (rl.IsKeyDown(keys.LEFT)) {
         userVel.x -= 1;
-        self.sprite.orientation = .LEFT;
+        self.orientation = .LEFT;
     }
     if (rl.IsKeyDown(keys.RIGHT)) {
         userVel.x += 1;
-        self.sprite.orientation = .RIGHT;
+        self.orientation = .RIGHT;
     }
     if (rl.IsKeyDown(keys.UP)) {
         userVel.y -= 1;
@@ -38,33 +47,26 @@ pub fn handlePlayerMovement(self: *Self, dTime: f32) rl.Vector2 {
 
     return userVel;
 }
+
 pub fn draw(self: *Self) void {
-    rl.DrawTexturePro(
-        self.sprite.texture,
+    self.currentSprite.draw(
         .{
-            .width = @floatFromInt(self.sprite.texture.width * @intFromEnum(self.sprite.orientation)),
-            .height = @floatFromInt(self.sprite.texture.height),
-            .x = 0,
-            .y = 0,
-        },
-        .{
-            .width = @floatFromInt(self.sprite.texture.width * self.sprite.SCALE_FACTOR),
-            .height = @floatFromInt(self.sprite.texture.height * self.sprite.SCALE_FACTOR),
             .x = self.hurtbox.x,
             .y = self.hurtbox.y,
         },
-        .{
-            .x = 0,
-            .y = 0,
-        },
-        0,
-        rl.WHITE,
+        .RIGHT,
     );
 }
 pub fn fire(self: *Self, playerVel: rl.Vector2) ?Projectile {
     if (rl.IsKeyPressed(self.keyMap.FIRE)) {
-        const projX: f32 = self.hurtbox.x + @as(f32, @floatFromInt(@divTrunc(self.sprite.texture.width * self.sprite.SCALE_FACTOR, 2))) - 10;
-        const projY: f32 = self.hurtbox.y + @as(f32, @floatFromInt(@divTrunc(self.sprite.texture.height * self.sprite.SCALE_FACTOR, 2))) - 10;
+        const projX: f32 = self.hurtbox.x + @as(f32, @floatFromInt(@divTrunc(
+            self.currentSprite.texture.width * self.currentSprite.scaleFactor,
+            2,
+        ))) - 10;
+        const projY: f32 = self.hurtbox.y + @as(f32, @floatFromInt(@divTrunc(
+            self.currentSprite.texture.height * self.currentSprite.scaleFactor,
+            2,
+        ))) - 10;
         var proj: Projectile = .{
             .rec = .{
                 .width = 20,
@@ -83,13 +85,7 @@ pub fn fire(self: *Self, playerVel: rl.Vector2) ?Projectile {
     return null;
 }
 
-pub const Sprite = struct {
-    SCALE_FACTOR: u16 = 3,
-    orientation: SpriteOrientation = .RIGHT,
-    texture: rl.Texture,
-};
-
-pub const SpriteOrientation = enum(i2) {
+pub const FaceDirection = enum(i2) {
     RIGHT = 1,
     LEFT = -1,
 };

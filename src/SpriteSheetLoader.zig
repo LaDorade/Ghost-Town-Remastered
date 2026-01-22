@@ -13,8 +13,8 @@ frameRectangles: []const rl.Rectangle,
 
 // Sprite List //
 
-pub const playerMovementSprite: Self = .{
-    .texturePath = "./assets/sprite.png",
+pub const playerWalkSprite: Self = .{
+    .texturePath = "./assets/player/walk.png",
     .frameHeight = 30,
     .frameWidth = 30,
     .nbFrame = 7,
@@ -29,12 +29,22 @@ pub const playerMovementSprite: Self = .{
         rl.Rectangle{ .x = 180, .y = 0, .height = 30, .width = 30 },
     },
 };
+pub const playerIdleSprite: Self = .{
+    .texturePath = "./assets/player/idle.png",
+    .frameHeight = 30,
+    .frameWidth = 30,
+    .nbFrame = 1,
+
+    .frameRectangles = &[_]rl.Rectangle{
+        rl.Rectangle{ .x = 0, .y = 0, .height = 30, .width = 30 },
+    },
+};
 
 comptime {
-    if (playerMovementSprite.frameRectangles.len != playerMovementSprite.nbFrame) {
+    if (playerWalkSprite.frameRectangles.len != playerWalkSprite.nbFrame) {
         const errMsg = std.fmt.comptimePrint("Frame Number: {}, Number of Rectangles: {}\n", .{
-            playerMovementSprite.nbFrame,
-            playerMovementSprite.frameRectangles,
+            playerWalkSprite.nbFrame,
+            playerWalkSprite.frameRectangles,
         });
         @compileError("Created a sprite animation with mismatching frame number and number of rectangles\n" ++ errMsg);
     }

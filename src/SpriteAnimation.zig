@@ -1,7 +1,7 @@
 const rl = @import("c.zig").rl;
 const std = @import("std");
 
-const SpriteOrientation = @import("Player.zig").SpriteOrientation;
+const FaceDirection = @import("Player.zig").FaceDirection;
 
 const Self = @This();
 
@@ -48,7 +48,7 @@ pub fn CreateSpriteAnimation(
 pub fn draw(
     self: *Self,
     pos: rl.Vector2,
-    orientation: SpriteOrientation,
+    orientation: FaceDirection,
 ) void {
     self.frameCounter += 1;
     if (self.frameCounter >= @divFloor(self.globalFPS, self.animationFps)) {

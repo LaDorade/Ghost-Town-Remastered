@@ -33,35 +33,38 @@ pub fn run() !void {
     defer rl.CloseWindow();
     rl.SetTargetFPS(GLOBAL_FPS);
 
-    const texture = rl.LoadTexture(
-        SpriteSheetLoader.playerMovementSprite.texturePath,
+    const playerMovementTexture = rl.LoadTexture(
+        SpriteSheetLoader.playerWalkSprite.texturePath,
     );
-    defer rl.UnloadTexture(texture);
+    defer rl.UnloadTexture(playerMovementTexture);
 
-    var sprite = SpriteAnimation.CreateSpriteAnimation(
-        texture,
-        SpriteSheetLoader.playerMovementSprite.frameRectangles,
+    const sprite = SpriteAnimation.CreateSpriteAnimation(
+        playerMovementTexture,
+        SpriteSheetLoader.playerWalkSprite.frameRectangles,
         10,
         GLOBAL_FPS,
     );
 
     const player1 = Player{
-        .sprite = .{
-            .texture = texture,
+        .spriteList = &[_]SpriteAnimation{
+            sprite,
         },
+        .orientation = .RIGHT,
+        .currentSpriteStance = .Idle,
+        .currentSprite = undefined,
         .keyMap = player1Keys,
         .hurtbox = .{},
     };
-    const player2 = Player{
-        .sprite = .{
-            .texture = texture,
-        },
-        .keyMap = player2Keys,
-        .hurtbox = .{},
-    };
-    var playList = [2]Player{
+    // const player2 = Player{
+    //     .sprite = .{
+    //         .texture = playerMovementTexture,
+    //     },
+    //     .keyMap = player2Keys,
+    //     .hurtbox = .{},
+    // };
+    var playList = [_]Player{
         player1,
-        player2,
+        // player2,
     };
 
     var projList = try std.ArrayList(Projectile).initCapacity(
@@ -70,19 +73,10 @@ pub fn run() !void {
     );
     defer projList.deinit(allocator);
 
-    var printBuf: [256]u8 = undefined;
     while (!rl.WindowShouldClose()) {
         rl.BeginDrawing();
         defer rl.EndDrawing();
         rl.ClearBackground(rl.RAYWHITE);
-
-        @memset(&printBuf, 0);
-        const fpsText = try std.fmt.bufPrint(&printBuf, "FPS: {}", .{rl.GetFPS()});
-        rl.DrawText(fpsText.ptr, 0, 0, 24, rl.BLACK);
-
-        sprite.draw(.{ .x = 300, .y = 300 }, .RIGHT);
-
-        if (true) continue;
 
         const dTime = rl.GetFrameTime();
 
