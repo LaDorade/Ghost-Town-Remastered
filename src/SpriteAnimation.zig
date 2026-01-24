@@ -8,41 +8,30 @@ const Self = @This();
 globalFPS: usize = 60,
 
 scaleFactor: u16 = 3,
-texture: rl.Texture,
-rectangles: []const rl.Rectangle,
 
-currentSprite: usize = 0,
-nbSprite: usize,
-spriteWidth: f32,
-spriteHeight: f32,
-
+// time related
 frameCounter: usize = 0,
 currentFrame: usize = 0,
-
 animationFps: usize,
 
-pub fn CreateSpriteAnimation(
-    spriteSheet: rl.Texture,
-    rectangles: []const rl.Rectangle,
-    animationFps: usize,
-    globalFps: usize,
-) Self {
-    const spriteWidth: f32 = @floatFromInt(@divFloor(
-        spriteSheet.width,
-        @as(c_int, @intCast(rectangles.len)),
-    ));
-    const spriteHeight: f32 = @floatFromInt(spriteSheet.height);
-    return .{
-        .texture = spriteSheet,
-        .rectangles = rectangles,
-        .nbSprite = rectangles.len,
-        .animationFps = animationFps,
+// texture
+texture: rl.Texture = undefined,
+texturePath: [*:0]const u8,
 
-        .spriteWidth = spriteWidth,
-        .spriteHeight = spriteHeight,
+// size of a sprite
+nbSprite: usize = undefined,
+currentSprite: usize = 0,
+oneSpriteWidth: f32,
+oneSpriteHeight: f32,
 
-        .globalFPS = globalFps,
-    };
+frameRectangles: []const rl.Rectangle,
+
+pub fn load(self: *Self) void {
+    self.texture = rl.LoadTexture(self.texturePath);
+    self.nbSprite = self.frameRectangles.len;
+}
+pub fn unload(self: *Self) void {
+    rl.UnloadTexture(self.texture);
 }
 
 pub fn draw(
@@ -57,15 +46,15 @@ pub fn draw(
 
         if (self.currentSprite > (self.nbSprite - 1)) self.currentSprite = 0;
     }
-    const width: f32 = self.spriteWidth *
-        @as(f32, @floatFromInt(self.scaleFactor)) *
-        @as(f32, @floatFromInt(@intFromEnum(orientation)));
+
+    var source = self.frameRectangles[self.currentSprite];
+    source.width *= @as(f32, @floatFromInt(@intFromEnum(orientation)));
     rl.DrawTexturePro(
         self.texture,
-        self.rectangles[self.currentSprite],
+        source,
         .{
-            .height = self.spriteHeight * @as(f32, @floatFromInt(self.scaleFactor)),
-            .width = width,
+            .height = self.oneSpriteHeight * @as(f32, @floatFromInt(self.scaleFactor)),
+            .width = self.oneSpriteWidth * @as(f32, @floatFromInt(self.scaleFactor)),
             .x = pos.x,
             .y = pos.y,
         },
@@ -74,3 +63,31 @@ pub fn draw(
         rl.WHITE,
     );
 }
+
+// Sprite List //
+pub var playerWalkSprite: Self = .{
+    .texturePath = "./assets/player/walk.png",
+    .animationFps = 12,
+    .oneSpriteHeight = 30,
+    .oneSpriteWidth = 30,
+
+    .frameRectangles = &[_]rl.Rectangle{
+        rl.Rectangle{ .x = 0, .y = 0, .height = 30, .width = 30 },
+        rl.Rectangle{ .x = 30, .y = 0, .height = 30, .width = 30 },
+        rl.Rectangle{ .x = 60, .y = 0, .height = 30, .width = 30 },
+        rl.Rectangle{ .x = 90, .y = 0, .height = 30, .width = 30 },
+        rl.Rectangle{ .x = 120, .y = 0, .height = 30, .width = 30 },
+        rl.Rectangle{ .x = 150, .y = 0, .height = 30, .width = 30 },
+        rl.Rectangle{ .x = 180, .y = 0, .height = 30, .width = 30 },
+    },
+};
+pub var playerIdleSprite: Self = .{
+    .texturePath = "./assets/player/idle.png",
+    .animationFps = 12,
+    .oneSpriteHeight = 30,
+    .oneSpriteWidth = 30,
+
+    .frameRectangles = &[_]rl.Rectangle{
+        rl.Rectangle{ .x = 0, .y = 0, .height = 30, .width = 30 },
+    },
+};

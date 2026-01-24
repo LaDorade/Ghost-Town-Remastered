@@ -4,7 +4,6 @@ const rl = @import("c.zig").rl;
 const Player = @import("Player.zig");
 const Projectile = @import("Projectile.zig");
 const SpriteAnimation = @import("SpriteAnimation.zig");
-const SpriteSheetLoader = @import("SpriteSheetLoader.zig");
 
 const player1Keys: Player.Keys = .{
     .UP = rl.KEY_W,
@@ -34,38 +33,27 @@ pub fn run() !void {
     rl.SetTargetFPS(GLOBAL_FPS);
     rl.SetTraceLogLevel(rl.LOG_DEBUG);
 
-    const playerMovementTexture = rl.LoadTexture(
-        SpriteSheetLoader.playerWalkSprite.texturePath,
-    );
-    defer rl.UnloadTexture(playerMovementTexture);
+    // Sprite loading
+    SpriteAnimation.playerWalkSprite.load();
+    SpriteAnimation.playerIdleSprite.load();
+    defer SpriteAnimation.playerWalkSprite.unload();
+    defer SpriteAnimation.playerIdleSprite.unload();
 
-    const sprite = SpriteAnimation.CreateSpriteAnimation(
-        playerMovementTexture,
-        SpriteSheetLoader.playerWalkSprite.frameRectangles,
-        10,
-        GLOBAL_FPS,
-    );
-
+    var spriteList = [_]SpriteAnimation{
+        SpriteAnimation.playerWalkSprite,
+        SpriteAnimation.playerIdleSprite,
+    };
     const player1 = Player{
-        .spriteList = &[_]SpriteAnimation{
-            sprite,
-        },
+        .spriteList = spriteList[0..],
         .orientation = .RIGHT,
         .currentSpriteStance = .Idle,
         .currentSprite = undefined,
         .keyMap = player1Keys,
         .hurtbox = .{},
     };
-    // const player2 = Player{
-    //     .sprite = .{
-    //         .texture = playerMovementTexture,
-    //     },
-    //     .keyMap = player2Keys,
-    //     .hurtbox = .{},
-    // };
+
     var playList = [_]Player{
         player1,
-        // player2,
     };
 
     var projList = try std.ArrayList(Projectile)

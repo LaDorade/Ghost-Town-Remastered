@@ -12,7 +12,7 @@ velocity: rl.Vector2 = .{
 orientation: FaceDirection,
 currentSpriteStance: PlayerSpriteStance,
 currentSprite: *SpriteAnimation,
-spriteList: []const SpriteAnimation,
+spriteList: []SpriteAnimation,
 
 targetVelocity: rl.Vector2 = .{ .x = 200, .y = 200 },
 actualVelocity: rl.Vector2 = .{ .x = 0, .y = 0 },
@@ -21,18 +21,6 @@ normalVelocity: rl.Vector2 = .{ .x = 0, .y = 0 },
 keyMap: Keys,
 hurtbox: rl.Rectangle,
 
-pub fn getPosition(self: *Self) rl.Vector2 {
-    return .{
-        .x = self.hurtbox.x,
-        .y = self.hurtbox.y,
-    };
-}
-pub fn getWidth(self: *Self) f32 {
-    return self.hurtbox.width;
-}
-pub fn getHeight(self: *Self) f32 {
-    return self.hurtbox.height;
-}
 pub fn handlePlayerMovement(self: *Self, dTime: f32) void {
     self.normalVelocity = rl.Vector2{
         .x = 0,
@@ -65,23 +53,34 @@ pub fn handlePlayerMovement(self: *Self, dTime: f32) void {
     self.hurtbox.y += self.actualVelocity.y * dTime;
 }
 
+fn checkCurrentSprite(self: *Self) void {
+    if (self.actualVelocity.x < 20 and self.actualVelocity.x > -20 and self.actualVelocity.y < 20 and self.actualVelocity.y > -20) {
+        self.currentSpriteStance = .Idle;
+    } else {
+        self.currentSpriteStance = .Movement;
+    }
+
+    self.currentSprite = &self.spriteList[@intFromEnum(self.currentSpriteStance)];
+}
+
 pub fn draw(self: *Self) void {
+    self.checkCurrentSprite();
     self.currentSprite.draw(
         .{
             .x = self.hurtbox.x,
             .y = self.hurtbox.y,
         },
-        .RIGHT,
+        self.orientation,
     );
 }
 pub fn fire(self: *Self) ?Projectile {
     if (rl.IsKeyPressed(self.keyMap.FIRE)) {
         const projX: f32 = self.hurtbox.x + @as(f32, @floatFromInt(@divTrunc(
-            self.currentSprite.texture.width * self.currentSprite.scaleFactor,
+            @as(i32, @intFromFloat(self.currentSprite.oneSpriteWidth)) * self.currentSprite.scaleFactor,
             2,
         ))) - 10;
         const projY: f32 = self.hurtbox.y + @as(f32, @floatFromInt(@divTrunc(
-            self.currentSprite.texture.height * self.currentSprite.scaleFactor,
+            @as(i32, @intFromFloat(self.currentSprite.oneSpriteHeight)) * self.currentSprite.scaleFactor,
             2,
         ))) - 10;
         var proj: Projectile = .{
