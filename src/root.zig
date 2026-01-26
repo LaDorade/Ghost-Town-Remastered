@@ -21,6 +21,9 @@ const player2Keys: Player.Keys = .{
     .FIRE = rl.KEY_RIGHT_SHIFT,
 };
 
+pub const GLOBAL_WIDTH = 800;
+pub const GLOBAL_HEIGHT = 600;
+
 pub fn run() !void {
     var gpa = std.heap.DebugAllocator(.{}).init;
     defer _ = gpa.deinit();
@@ -28,7 +31,7 @@ pub fn run() !void {
 
     const GLOBAL_FPS = 60;
 
-    rl.InitWindow(800, 600, "game");
+    rl.InitWindow(GLOBAL_WIDTH, GLOBAL_HEIGHT, "game");
     defer rl.CloseWindow();
     rl.SetTargetFPS(GLOBAL_FPS);
     rl.SetTraceLogLevel(rl.LOG_DEBUG);
@@ -65,13 +68,9 @@ pub fn run() !void {
         defer rl.EndDrawing();
         rl.ClearBackground(rl.RAYWHITE);
 
-        const dTime = rl.GetFrameTime();
-
         // players gestion
         for (&playList) |*player| {
-            player.handlePlayerMovement(
-                dTime,
-            );
+            player.handlePlayerMovement();
 
             if (player.fire()) |proj| {
                 try projList.append(allocator, proj);
@@ -95,9 +94,7 @@ pub fn run() !void {
                 _ = projList.swapRemove(i - 1);
                 rl.TraceLog(rl.LOG_DEBUG, "Proj deleted");
             } else {
-                proj.handlePosition(
-                    dTime,
-                );
+                proj.handlePosition();
                 proj.draw();
             }
         }

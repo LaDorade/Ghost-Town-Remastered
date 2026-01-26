@@ -2,6 +2,8 @@ const rl = @import("c.zig").rl;
 const Projectile = @import("Projectile.zig");
 const SpriteAnimation = @import("SpriteAnimation.zig");
 
+const root = @import("root.zig");
+
 const Self = @This();
 
 velocity: rl.Vector2 = .{
@@ -21,7 +23,8 @@ normalVelocity: rl.Vector2 = .{ .x = 0, .y = 0 },
 keyMap: Keys,
 hurtbox: rl.Rectangle,
 
-pub fn handlePlayerMovement(self: *Self, dTime: f32) void {
+pub fn handlePlayerMovement(self: *Self) void {
+    const dTime = rl.GetFrameTime();
     self.normalVelocity = rl.Vector2{
         .x = 0,
         .y = 0,
@@ -51,6 +54,17 @@ pub fn handlePlayerMovement(self: *Self, dTime: f32) void {
     );
     self.hurtbox.x += self.actualVelocity.x * dTime;
     self.hurtbox.y += self.actualVelocity.y * dTime;
+
+    if (self.hurtbox.x <= 0) {
+        self.hurtbox.x = 0;
+    } else if ((self.hurtbox.x + self.currentSprite.getCurrentSpriteWidth()) >= root.GLOBAL_WIDTH) {
+        self.hurtbox.x = root.GLOBAL_WIDTH - self.currentSprite.getCurrentSpriteWidth();
+    }
+    if (self.hurtbox.y <= 0) {
+        self.hurtbox.y = 0;
+    } else if ((self.hurtbox.y + self.currentSprite.getCurrentSpriteHeight()) >= root.GLOBAL_HEIGHT) {
+        self.hurtbox.y = root.GLOBAL_HEIGHT - self.currentSprite.getCurrentSpriteHeight();
+    }
 }
 
 fn checkCurrentSprite(self: *Self) void {
@@ -85,8 +99,8 @@ pub fn fire(self: *Self) ?Projectile {
         ))) - 10;
         var proj: Projectile = .{
             .rec = .{
-                .width = 20,
-                .height = 20,
+                .width = Projectile.DEFAULT_SIZE,
+                .height = Projectile.DEFAULT_SIZE,
                 .x = projX,
                 .y = projY,
             },
