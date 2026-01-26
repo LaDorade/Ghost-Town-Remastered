@@ -3,6 +3,7 @@ const rl = @import("c.zig").rl;
 
 const Player = @import("Player.zig");
 const Projectile = @import("Projectile.zig");
+const SpriteAnimation = @import("SpriteAnimation.zig");
 
 const player1Keys: Player.Keys = .{
     .UP = rl.KEY_W,
@@ -25,31 +26,34 @@ pub fn run() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
+    const GLOBAL_FPS = 60;
+
     rl.InitWindow(800, 600, "game");
     defer rl.CloseWindow();
-    rl.SetTargetFPS(60);
+    rl.SetTargetFPS(GLOBAL_FPS);
     rl.SetTraceLogLevel(rl.LOG_DEBUG);
 
-    const texture = rl.LoadTexture("./assets/player.png");
-    defer rl.UnloadTexture(texture);
+    // Sprite loading
+    SpriteAnimation.playerWalkSprite.load();
+    SpriteAnimation.playerIdleSprite.load();
+    defer SpriteAnimation.playerWalkSprite.unload();
+    defer SpriteAnimation.playerIdleSprite.unload();
 
+    var spriteList = [_]SpriteAnimation{
+        SpriteAnimation.playerWalkSprite,
+        SpriteAnimation.playerIdleSprite,
+    };
     const player1 = Player{
-        .sprite = .{
-            .texture = texture,
-        },
+        .spriteList = spriteList[0..],
+        .orientation = .RIGHT,
+        .currentSpriteStance = .Idle,
+        .currentSprite = undefined,
         .keyMap = player1Keys,
         .hurtbox = .{},
     };
-    const player2 = Player{
-        .sprite = .{
-            .texture = texture,
-        },
-        .keyMap = player2Keys,
-        .hurtbox = .{},
-    };
-    var playList = [2]Player{
+
+    var playList = [_]Player{
         player1,
-        player2,
     };
 
     var projList = try std.ArrayList(Projectile)
@@ -59,7 +63,6 @@ pub fn run() !void {
     while (!rl.WindowShouldClose()) {
         rl.BeginDrawing();
         defer rl.EndDrawing();
-
         rl.ClearBackground(rl.RAYWHITE);
 
         const dTime = rl.GetFrameTime();
@@ -101,7 +104,7 @@ pub fn run() !void {
 
         // draw players last to be on top
         for (&playList) |*p| {
-            p.drawPlayer();
+            p.draw();
         }
     }
 }
