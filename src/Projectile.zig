@@ -1,6 +1,10 @@
 const rl = @import("c.zig").rl;
+
+const Timer = @import("timer.zig");
+
 const Self = @This();
 
+timer_sec: Timer = Timer.create(2, true),
 velocity: rl.Vector2 = .{
     .x = 400,
     .y = 400,
@@ -24,9 +28,17 @@ pub fn draw(self: *const Self) void {
     );
 }
 
-pub fn isOutOfBound(self: *const Self) bool {
+fn isOutOfBound(self: *const Self) bool {
     return self.rec.x > 900 or
         self.rec.x < -100 or
         self.rec.y > 700 or
         self.rec.y < -100;
+}
+
+pub fn tick(self: *Self) void {
+    self.timer_sec.tick();
+}
+
+pub fn shouldBeDestroyed(self: *Self) bool {
+    return self.isOutOfBound() or self.timer_sec.over;
 }

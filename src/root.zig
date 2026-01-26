@@ -85,7 +85,8 @@ pub fn run() !void {
         var i: usize = projList.items.len;
         while (i > 0) : (i -= 1) {
             const proj = &projList.items[i - 1];
-            if (proj.isOutOfBound()) {
+            proj.tick();
+            if (proj.shouldBeDestroyed()) {
                 _ = projList.swapRemove(i - 1);
                 std.debug.print("Proj deleted\n", .{});
             } else {
