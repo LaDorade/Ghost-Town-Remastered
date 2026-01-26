@@ -1,6 +1,7 @@
 const rl = @import("c.zig").rl;
 const Projectile = @import("Projectile.zig");
 const SpriteAnimation = @import("SpriteAnimation.zig");
+const Timer = @import("timer.zig");
 
 const root = @import("root.zig");
 
@@ -10,6 +11,8 @@ velocity: rl.Vector2 = .{
     .x = 200,
     .y = 200,
 },
+
+fireRateTimer: Timer = .create(0.5, true),
 
 orientation: FaceDirection,
 currentSpriteStance: PlayerSpriteStance,
@@ -23,7 +26,7 @@ normalVelocity: rl.Vector2 = .{ .x = 0, .y = 0 },
 keyMap: Keys,
 hurtbox: rl.Rectangle,
 
-pub fn handlePlayerMovement(self: *Self) void {
+fn handlePlayerMovement(self: *Self) void {
     const dTime = rl.GetFrameTime();
     self.normalVelocity = rl.Vector2{
         .x = 0,
@@ -77,8 +80,18 @@ fn checkCurrentSprite(self: *Self) void {
     self.currentSprite = &self.spriteList[@intFromEnum(self.currentSpriteStance)];
 }
 
-pub fn draw(self: *Self) void {
+/// Each frame logic
+pub fn tick(self: *Self) void {
+    self.handlePlayerMovement();
     self.checkCurrentSprite();
+
+    self.fireRateTimer.tick();
+
+    self.hurtbox.height = self.currentSprite.getCurrentSpriteHeight();
+    self.hurtbox.width = self.currentSprite.getCurrentSpriteWidth();
+}
+
+pub fn draw(self: *Self) void {
     self.currentSprite.draw(
         .{
             .x = self.hurtbox.x,
@@ -86,15 +99,26 @@ pub fn draw(self: *Self) void {
         },
         self.orientation,
     );
+
+    // draw fire available
+    if (self.fireRateTimer.over) {
+        rl.DrawRectangle(
+            @intFromFloat(self.hurtbox.x),
+            @intFromFloat(self.hurtbox.y),
+            10,
+            10,
+            rl.BLUE,
+        );
+    }
 }
 pub fn fire(self: *Self) ?Projectile {
-    if (rl.IsKeyPressed(self.keyMap.FIRE)) {
+    if (rl.IsKeyDown(self.keyMap.FIRE) and self.fireRateTimer.over) {
         const projX: f32 = self.hurtbox.x + @as(f32, @floatFromInt(@divTrunc(
-            @as(i32, @intFromFloat(self.currentSprite.oneSpriteWidth)) * self.currentSprite.scaleFactor,
+            @as(i32, @intFromFloat(self.hurtbox.width)),
             2,
         ))) - 10;
         const projY: f32 = self.hurtbox.y + @as(f32, @floatFromInt(@divTrunc(
-            @as(i32, @intFromFloat(self.currentSprite.oneSpriteHeight)) * self.currentSprite.scaleFactor,
+            @as(i32, @intFromFloat(self.hurtbox.height)),
             2,
         ))) - 10;
         var proj: Projectile = .{
@@ -110,6 +134,7 @@ pub fn fire(self: *Self) ?Projectile {
         proj.velocity.x *= self.normalVelocity.x;
         proj.velocity.y *= self.normalVelocity.y;
 
+        self.fireRateTimer.restart();
         return proj;
     }
     return null;
@@ -123,7 +148,6 @@ pub const FaceDirection = enum(i2) {
     RIGHT = 1,
     LEFT = -1,
 };
-
 pub const Keys = struct {
     UP: c_int,
     DOWN: c_int,

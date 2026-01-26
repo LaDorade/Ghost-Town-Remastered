@@ -4,6 +4,7 @@ const rl = @import("c.zig").rl;
 const Player = @import("Player.zig");
 const Projectile = @import("Projectile.zig");
 const SpriteAnimation = @import("SpriteAnimation.zig");
+const Timer = @import("timer.zig");
 
 const player1Keys: Player.Keys = .{
     .UP = rl.KEY_W,
@@ -23,6 +24,11 @@ const player2Keys: Player.Keys = .{
 
 pub const GLOBAL_WIDTH = 800;
 pub const GLOBAL_HEIGHT = 600;
+
+const Obstacle = struct {
+    velocity: rl.Vector2,
+    hitbox: rl.Rectangle,
+};
 
 pub fn run() !void {
     var gpa = std.heap.DebugAllocator(.{}).init;
@@ -63,6 +69,14 @@ pub fn run() !void {
         .initCapacity(allocator, 10);
     defer projList.deinit(allocator);
 
+    var bonus = true;
+
+    var obstacleList = try std.ArrayList(Obstacle)
+        .initCapacity(allocator, 10);
+    defer obstacleList.deinit(allocator);
+    var obtacleSpawnTimer = Timer.create(1, true);
+    rl.SetRandomSeed(2);
+
     while (!rl.WindowShouldClose()) {
         rl.BeginDrawing();
         defer rl.EndDrawing();
@@ -70,7 +84,7 @@ pub fn run() !void {
 
         // players gestion
         for (&playList) |*player| {
-            player.handlePlayerMovement();
+            player.tick();
 
             if (player.fire()) |proj| {
                 try projList.append(allocator, proj);
@@ -96,6 +110,72 @@ pub fn run() !void {
             } else {
                 proj.handlePosition();
                 proj.draw();
+            }
+        }
+
+        // obstacle gestion
+        {
+            obtacleSpawnTimer.tick();
+            if (obtacleSpawnTimer.over) {
+                const y = rl.GetRandomValue(20, 450);
+                try obstacleList.append(
+                    allocator,
+                    .{
+                        .hitbox = .{
+                            .x = -100,
+                            .y = @floatFromInt(y),
+                            .width = 80,
+                            .height = 80,
+                        },
+                        .velocity = .{ .x = 200, .y = 0 },
+                    },
+                );
+                const newTime: f32 = @floatFromInt(rl.GetRandomValue(5, 15));
+                obtacleSpawnTimer.restartWithTime(newTime / 10);
+            }
+            i = obstacleList.items.len;
+            const dTime = rl.GetFrameTime();
+            while (i > 0) : (i -= 1) {
+                const ob = &obstacleList.items[i - 1];
+                var collision = false;
+                for (&playList) |player| {
+                    if (rl.CheckCollisionRecs(player.hurtbox, ob.hitbox)) {
+                        collision = true;
+                    }
+                }
+                if (ob.hitbox.x >= 900 or collision) {
+                    _ = obstacleList.swapRemove(i - 1);
+                } else {
+                    ob.hitbox.x += ob.velocity.x * dTime;
+                    rl.DrawRectangleRec(
+                        ob.hitbox,
+                        rl.GRAY,
+                    );
+                }
+            }
+        }
+
+        // bonus
+        if (bonus) {
+            const bonusRec = rl.Rectangle{
+                .x = 400,
+                .y = 400,
+                .height = 30,
+                .width = 30,
+            };
+            rl.DrawRectangleRec(
+                bonusRec,
+                rl.GREEN,
+            );
+
+            for (&playList) |*player| {
+                if (rl.CheckCollisionRecs(player.hurtbox, bonusRec)) {
+                    player.targetVelocity.x += 100;
+                    player.targetVelocity.y += 100;
+                    player.fireRateTimer.initialVal_sec = 0.25;
+                    bonus = false;
+                    break;
+                }
             }
         }
 

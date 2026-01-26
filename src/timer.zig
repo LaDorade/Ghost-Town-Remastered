@@ -29,8 +29,12 @@ pub fn start(self: *Self) void {
 }
 pub fn restart(self: *Self) void {
     self.elapsed_sec = 0;
-    self.ticking = true;
     self.over = false;
+    self.start();
+}
+pub fn restartWithTime(self: *Self, newTime: f32) void {
+    self.initialVal_sec = newTime;
+    self.restart();
 }
 
 /// near 0 when starting, near 1 when end
