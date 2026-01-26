@@ -28,6 +28,7 @@ pub fn run() !void {
     rl.InitWindow(800, 600, "game");
     defer rl.CloseWindow();
     rl.SetTargetFPS(60);
+    rl.SetTraceLogLevel(rl.LOG_DEBUG);
 
     const texture = rl.LoadTexture("./assets/player.png");
     defer rl.UnloadTexture(texture);
@@ -51,10 +52,8 @@ pub fn run() !void {
         player2,
     };
 
-    var projList = try std.ArrayList(Projectile).initCapacity(
-        allocator,
-        10,
-    );
+    var projList = try std.ArrayList(Projectile)
+        .initCapacity(allocator, 10);
     defer projList.deinit(allocator);
 
     while (!rl.WindowShouldClose()) {
@@ -67,17 +66,20 @@ pub fn run() !void {
 
         // players gestion
         for (&playList) |*player| {
-            const playerVel = player.handlePlayerMovement(
+            player.handlePlayerMovement(
                 dTime,
             );
 
-            if (player.fire(playerVel)) |proj| {
+            if (player.fire()) |proj| {
                 try projList.append(allocator, proj);
-                std.debug.print("Proj created with x: {d}, y: {d}, velX: {d:.2}\n", .{
+                rl.TraceLog(
+                    rl.LOG_DEBUG,
+                    "Proj created with x: %.2f, y: %.2f, velX: %.2f, velY: %.2f",
                     proj.rec.x,
                     proj.rec.y,
                     proj.velocity.x,
-                });
+                    proj.velocity.y,
+                );
             }
         }
 
@@ -88,7 +90,7 @@ pub fn run() !void {
             proj.tick();
             if (proj.shouldBeDestroyed()) {
                 _ = projList.swapRemove(i - 1);
-                std.debug.print("Proj deleted\n", .{});
+                rl.TraceLog(rl.LOG_DEBUG, "Proj deleted");
             } else {
                 proj.handlePosition(
                     dTime,

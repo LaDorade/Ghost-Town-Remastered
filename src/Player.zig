@@ -3,10 +3,24 @@ const Projectile = @import("Projectile.zig");
 
 const Self = @This();
 
-velocity: rl.Vector2 = .{
-    .x = 200,
-    .y = 200,
-},
+pub const Sprite = struct {
+    SCALE_FACTOR: u16 = 3,
+    orientation: SpriteOrientation = .RIGHT,
+    texture: rl.Texture,
+};
+pub const SpriteOrientation = enum(i2) { RIGHT = 1, LEFT = -1 };
+pub const Keys = struct {
+    UP: c_int,
+    DOWN: c_int,
+    LEFT: c_int,
+    RIGHT: c_int,
+    FIRE: c_int,
+};
+
+targetVelocity: rl.Vector2 = .{ .x = 200, .y = 200 },
+actualVelocity: rl.Vector2 = .{ .x = 0, .y = 0 },
+/// x/y between -1 & 1
+normalVelocity: rl.Vector2 = .{ .x = 0, .y = 0 },
 sprite: Sprite,
 keyMap: Keys,
 hurtbox: rl.Rectangle,
@@ -23,31 +37,36 @@ pub fn getWidth(self: *Self) f32 {
 pub fn getHeight(self: *Self) f32 {
     return self.hurtbox.height;
 }
-pub fn handlePlayerMovement(self: *Self, dTime: f32) rl.Vector2 {
-    var userVel = rl.Vector2{
+pub fn handlePlayerMovement(self: *Self, dTime: f32) void {
+    self.normalVelocity = rl.Vector2{
         .x = 0,
         .y = 0,
     };
     const keys = self.keyMap;
     if (rl.IsKeyDown(keys.LEFT)) {
-        userVel.x -= 1;
+        self.normalVelocity.x -= 1;
         self.sprite.orientation = .LEFT;
     }
     if (rl.IsKeyDown(keys.RIGHT)) {
-        userVel.x += 1;
+        self.normalVelocity.x += 1;
         self.sprite.orientation = .RIGHT;
     }
     if (rl.IsKeyDown(keys.UP)) {
-        userVel.y -= 1;
+        self.normalVelocity.y -= 1;
     }
     if (rl.IsKeyDown(keys.DOWN)) {
-        userVel.y += 1;
+        self.normalVelocity.y += 1;
     }
-    const norm = rl.Vector2Normalize(userVel);
-    self.hurtbox.x += self.velocity.x * dTime * norm.x;
-    self.hurtbox.y += self.velocity.y * dTime * norm.y;
+    // ensure we don't have more speed in diagonal
+    self.normalVelocity = rl.Vector2Normalize(self.normalVelocity);
 
-    return userVel;
+    self.actualVelocity = rl.Vector2Lerp(
+        self.actualVelocity,
+        rl.Vector2Multiply(self.targetVelocity, self.normalVelocity),
+        0.25,
+    );
+    self.hurtbox.x += self.actualVelocity.x * dTime;
+    self.hurtbox.y += self.actualVelocity.y * dTime;
 }
 pub fn drawPlayer(self: *Self) void {
     rl.DrawTexturePro(
@@ -72,7 +91,7 @@ pub fn drawPlayer(self: *Self) void {
         rl.WHITE,
     );
 }
-pub fn fire(self: *Self, playerVel: rl.Vector2) ?Projectile {
+pub fn fire(self: *Self) ?Projectile {
     if (rl.IsKeyPressed(self.keyMap.FIRE)) {
         const projX: f32 = self.hurtbox.x + @as(f32, @floatFromInt(@divTrunc(self.sprite.texture.width * self.sprite.SCALE_FACTOR, 2))) - 10;
         const projY: f32 = self.hurtbox.y + @as(f32, @floatFromInt(@divTrunc(self.sprite.texture.height * self.sprite.SCALE_FACTOR, 2))) - 10;
@@ -85,30 +104,11 @@ pub fn fire(self: *Self, playerVel: rl.Vector2) ?Projectile {
             },
         };
 
-        const norm = rl.Vector2Normalize(playerVel);
-        proj.velocity.x *= norm.x;
-        proj.velocity.y *= norm.y;
+        // by using the normalizedVel from the player, the proj isn't faster in diagonal
+        proj.velocity.x *= self.normalVelocity.x;
+        proj.velocity.y *= self.normalVelocity.y;
 
         return proj;
     }
     return null;
 }
-
-pub const Sprite = struct {
-    SCALE_FACTOR: u16 = 3,
-    orientation: SpriteOrientation = .RIGHT,
-    texture: rl.Texture,
-};
-
-pub const SpriteOrientation = enum(i2) {
-    RIGHT = 1,
-    LEFT = -1,
-};
-
-pub const Keys = struct {
-    UP: c_int,
-    DOWN: c_int,
-    LEFT: c_int,
-    RIGHT: c_int,
-    FIRE: c_int,
-};
