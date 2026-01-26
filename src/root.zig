@@ -58,7 +58,10 @@ pub fn run() !void {
         .currentSpriteStance = .Idle,
         .currentSprite = undefined,
         .keyMap = player1Keys,
-        .hurtbox = .{},
+        .hurtbox = .{
+            .x = 300,
+            .y = 300,
+        },
     };
 
     var playList = [_]Player{
@@ -138,9 +141,13 @@ pub fn run() !void {
             while (i > 0) : (i -= 1) {
                 const ob = &obstacleList.items[i - 1];
                 var collision = false;
-                for (&playList) |player| {
+                for (&playList) |*player| {
                     if (rl.CheckCollisionRecs(player.hurtbox, ob.hitbox)) {
+                        if (player.state == .Dead) {
+                            continue;
+                        }
                         collision = true;
+                        player.takeHit();
                     }
                 }
                 if (ob.hitbox.x >= 900 or collision) {
@@ -181,7 +188,33 @@ pub fn run() !void {
 
         // draw players last to be on top
         for (&playList) |*p| {
-            p.draw();
+            try p.draw();
+        }
+
+        // UI
+        rl.DrawRectangle(
+            0,
+            0,
+            200,
+            60,
+            rl.BLUE,
+        );
+        for (&playList, 0..) |p, ind| {
+            var buff: [20]u8 = undefined;
+            @memset(&buff, 0);
+            var text: []u8 = undefined;
+            if (p.state == .Dead) {
+                text = try std.fmt.bufPrint(&buff, "P{}: Dead", .{ind + 1});
+            } else {
+                text = try std.fmt.bufPrint(&buff, "P{} Lives: {}", .{ ind + 1, p.life });
+            }
+            rl.DrawText(
+                text.ptr,
+                10,
+                @intCast(10 * (ind + 1)),
+                20,
+                rl.BLACK,
+            );
         }
     }
 }

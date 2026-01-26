@@ -1,3 +1,4 @@
+const std = @import("std");
 const rl = @import("c.zig").rl;
 const Projectile = @import("Projectile.zig");
 const SpriteAnimation = @import("SpriteAnimation.zig");
@@ -7,12 +8,20 @@ const root = @import("root.zig");
 
 const Self = @This();
 
+const PlayerState = enum {
+    Alive,
+    Dead,
+};
+
 velocity: rl.Vector2 = .{
     .x = 200,
     .y = 200,
 },
 
 fireRateTimer: Timer = .create(0.5, true),
+
+life: usize = 3,
+state: PlayerState = .Alive,
 
 orientation: FaceDirection,
 currentSpriteStance: PlayerSpriteStance,
@@ -82,22 +91,50 @@ fn checkCurrentSprite(self: *Self) void {
 
 /// Each frame logic
 pub fn tick(self: *Self) void {
-    self.handlePlayerMovement();
     self.checkCurrentSprite();
-
-    self.fireRateTimer.tick();
-
     self.hurtbox.height = self.currentSprite.getCurrentSpriteHeight();
     self.hurtbox.width = self.currentSprite.getCurrentSpriteWidth();
+
+    if (self.state != PlayerState.Alive) {
+        return;
+    }
+
+    self.handlePlayerMovement();
+    self.fireRateTimer.tick();
 }
 
-pub fn draw(self: *Self) void {
+pub fn takeHit(self: *Self) void {
+    if (self.state == PlayerState.Dead) {
+        return;
+    }
+    self.life -= 1;
+    if (self.life <= 0) {
+        self.state = PlayerState.Dead;
+    }
+}
+
+pub fn draw(self: *Self) !void {
     self.currentSprite.draw(
         .{
             .x = self.hurtbox.x,
             .y = self.hurtbox.y,
         },
         self.orientation,
+    );
+    var buff: [20]u8 = undefined;
+    @memset(&buff, 0);
+    var text: []u8 = undefined;
+    if (self.state == .Dead) {
+        text = try std.fmt.bufPrint(&buff, "Dead", .{});
+    } else {
+        text = try std.fmt.bufPrint(&buff, "Lives: {}", .{self.life});
+    }
+    rl.DrawText(
+        text.ptr,
+        @intFromFloat(self.hurtbox.x),
+        @intFromFloat(self.hurtbox.y),
+        20,
+        rl.BLACK,
     );
 
     // draw fire available
@@ -112,6 +149,9 @@ pub fn draw(self: *Self) void {
     }
 }
 pub fn fire(self: *Self) ?Projectile {
+    if (self.state != PlayerState.Alive) {
+        return null;
+    }
     if (rl.IsKeyDown(self.keyMap.FIRE) and self.fireRateTimer.over) {
         const projX: f32 = self.hurtbox.x + @as(f32, @floatFromInt(@divTrunc(
             @as(i32, @intFromFloat(self.hurtbox.width)),
