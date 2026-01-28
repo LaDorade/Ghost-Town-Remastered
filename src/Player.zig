@@ -13,6 +13,8 @@ const PlayerState = enum {
     Dead,
 };
 
+id: usize,
+
 velocity: rl.Vector2 = .{
     .x = 200,
     .y = 200,

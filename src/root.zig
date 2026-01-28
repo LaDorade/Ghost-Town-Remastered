@@ -6,6 +6,7 @@ const Projectile = @import("Projectile.zig");
 const SpriteAnimation = @import("SpriteAnimation.zig");
 const Timer = @import("timer.zig");
 const Obstacle = @import("Obstacle.zig");
+const DamageArea = @import("DamageArea.zig");
 
 const player1Keys: Player.Keys = .{
     .UP = rl.KEY_W,
@@ -49,6 +50,7 @@ pub fn run() !void {
         SpriteAnimation.playerIdleSprite,
     };
     const player1 = Player{
+        .id = 1,
         .spriteList = spriteList[0..],
         .orientation = .RIGHT,
         .currentSpriteStance = .Idle,
@@ -70,6 +72,11 @@ pub fn run() !void {
 
     var obstacleHanlder = try Obstacle.init(allocator);
     defer obstacleHanlder.deinit();
+
+    var damageAreaList = try std.ArrayList(DamageArea)
+        .initCapacity(allocator, 10);
+    defer damageAreaList.deinit(allocator);
+    var areaCreation_timer = Timer.create(1, true);
 
     var bonus = true;
 
@@ -136,6 +143,56 @@ pub fn run() !void {
 
         // obstacles
         try obstacleHanlder.tick(&playList);
+
+        // damager areas
+        {
+            areaCreation_timer.tick();
+            if (areaCreation_timer.over) {
+                try damageAreaList.append(
+                    allocator,
+                    .create(
+                        rl.GetRandomValue(0, GLOBAL_WIDTH),
+                        rl.GetRandomValue(0, GLOBAL_HEIGHT),
+                        rl.GetRandomValue(70, 130),
+                    ),
+                );
+                areaCreation_timer.restartWithTime(
+                    @as(f32, @floatFromInt(rl.GetRandomValue(80, 170))) / 100,
+                );
+            }
+            i = damageAreaList.items.len;
+            while (i > 0) : (i -= 1) {
+                const da = &damageAreaList.items[i - 1];
+                da.tick();
+                if (da.state == .Inactive) {
+                    _ = damageAreaList.swapRemove(i - 1);
+                }
+                if (da.state != .Acting) {
+                    continue;
+                }
+                for (&playList) |*pl| {
+                    const collide = rl.CheckCollisionCircleRec(da.pos, da.radius, pl.hurtbox);
+                    if (pl.state == .Dead) {
+                        continue;
+                    }
+                    if (collide) {
+                        pl.takeHit();
+                        _ = damageAreaList.swapRemove(i - 1);
+                        rl.TraceLog(
+                            rl.LOG_DEBUG,
+                            rl.TextFormat(
+                                "Player %d took a hit from DamageArea",
+                                pl.id,
+                            ),
+                        );
+                        break;
+                    }
+                }
+            }
+            for (damageAreaList.items) |*da| {
+                da.draw();
+            }
+        }
 
         // draw players last to be on top
         for (&playList) |*p| {

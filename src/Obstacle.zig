@@ -53,17 +53,7 @@ pub fn tick(self: *Self, playList: []Player) !void {
     const dTime = rl.GetFrameTime();
     while (i > 0) : (i -= 1) {
         const ob = &self.obstacleList.items[i - 1];
-        var collision = false;
-        for (playList) |*player| {
-            if (rl.CheckCollisionRecs(player.hurtbox, ob.hitbox)) {
-                if (player.state == .Dead) {
-                    continue;
-                }
-                collision = true;
-                player.takeHit();
-            }
-        }
-        if (ob.hitbox.x >= 900 or collision) {
+        if (ob.hitbox.x >= 900) {
             _ = self.obstacleList.swapRemove(i - 1);
         } else {
             ob.hitbox.x += ob.velocity.x * dTime;
@@ -71,6 +61,20 @@ pub fn tick(self: *Self, playList: []Player) !void {
                 ob.hitbox,
                 rl.GRAY,
             );
+        }
+        for (playList) |*player| {
+            if (rl.CheckCollisionRecs(player.hurtbox, ob.hitbox)) {
+                if (player.state == .Dead) {
+                    continue;
+                }
+                player.takeHit();
+                _ = self.obstacleList.swapRemove(i - 1);
+                rl.TraceLog(
+                    rl.LOG_DEBUG,
+                    rl.TextFormat("Player %d took a hit from Obstacle", player.id),
+                );
+                break;
+            }
         }
     }
 }
